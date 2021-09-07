@@ -2,7 +2,7 @@ package main
 
 import (
     "github.com/gin-gonic/gin"
-    "github.com/caseyfu/go/module/say"
+    gomod "github.com/caseyfu/gomod"
 )
 
 func main() {
@@ -12,8 +12,14 @@ func main() {
             "message": "pong",
         })
     })
-    r.GET("/v1/say", func(c *gin.Context) {
-        msg := say.SayHi("Fu Kai")
+    r.GET("/v100/say", func(c *gin.Context) {
+        msg := gomod.SayHiV100("Fu Kai")
+        c.JSON(200, gin.H{
+            "message": msg,
+        })
+    })
+    r.GET("/v101/say", func(c *gin.Context) {
+        msg := gomod.SayHiV101("Fu Kai")
         c.JSON(200, gin.H{
             "message": msg,
         })
