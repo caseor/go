@@ -1,87 +1,79 @@
-// shippy-service-consignment/main.go
 package main
 
 import (
-  "context"
-  "log"
-  "net"
-  "sync"
-
-  // Import the generated protobuf code
-  pb "shippy/shippy-service-consignment/proto/consignment"
-  "google.golang.org/grpc"
-  "google.golang.org/grpc/reflection"
+	"context"
+	pb "github.com/caseyfu/go/shippy/consignment-service/proto/consignment"
+	"google.golang.org/grpc"
+	"log"
+	// 导如 protoc 自动生成的包
+	"net"
 )
 
 const (
-  port = ":50051"
+	PORT = ":50051"
 )
 
-type repository interface {
-  Create(*pb.Consignment) (*pb.Consignment, error)
+// IRepository 仓库接口
+type IRepository interface {
+	Create(consignment *pb.Consignment) (*pb.Consignment, error) // 存放新货物
+	GetAll() []*pb.Consignment                                   // 获取仓库中所有的货物
 }
 
-// Repository - Dummy repository, this simulates the use of a datastore
-// of some kind. We'll replace this with a real implementation later on.
+// Repository 我们存放多批货物的仓库，实现了 IRepository 接口
 type Repository struct {
-  mu           sync.RWMutex
-  consignments []*pb.Consignment
+	consignments []*pb.Consignment
 }
 
-// Create a new consignment
 func (repo *Repository) Create(consignment *pb.Consignment) (*pb.Consignment, error) {
-  repo.mu.Lock()
-  updated := append(repo.consignments, consignment)
-  repo.consignments = updated
-  repo.mu.Unlock()
-  return consignment, nil
+	repo.consignments = append(repo.consignments, consignment)
+	return consignment, nil
 }
 
-// Service should implement all of the methods to satisfy the service
-// we defined in our protobuf definition. You can check the interface
-// in the generated code itself for the exact method signatures etc
-// to give you a better idea.
+func (repo *Repository) GetAll() []*pb.Consignment {
+	return repo.consignments
+}
+
+// 定义微服务
 type service struct {
-  repo repository
+	repo Repository
 }
 
-// CreateConsignment - we created just one method on our service,
-// which is a create method, which takes a context and a request as an
-// argument, these are handled by the gRPC server.
+// CreateConsignment
+// service 实现 consignment.pb.go 中的 ShippingServiceServer 接口
+// 使 service 作为 gRPC 的服务端
+// 托运新的货物
 func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment) (*pb.Response, error) {
+	// 接收承运的货物
+	consignment, err := s.repo.Create(req)
+	if err != nil {
+		return nil, err
+	}
+	resp := &pb.Response{Created: true, Consignment: consignment}
+	return resp, nil
+}
 
-  // Save our consignment
-  consignment, err := s.repo.Create(req)
-  if err != nil {
-    return nil, err
-  }
-
-  // Return matching the `Response` message we created in our
-  // protobuf definition.
-  return &pb.Response{Created: true, Consignment: consignment}, nil
+// GetConsignments 获取目前所有托运的货物
+func (s *service) GetConsignments(ctx context.Context, req *pb.GetRequest) (*pb.Response, error) {
+	allConsignments := s.repo.GetAll()
+	resp := &pb.Response{Consignments: allConsignments}
+	return resp, nil
 }
 
 func main() {
+	listener, err := net.Listen("tcp", PORT)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	log.Printf("listen on: %s\n", PORT)
 
-  repo := &Repository{}
+	server := grpc.NewServer()
+	repo := Repository{}
 
-  // Set-up our gRPC server.
-  lis, err := net.Listen("tcp", port)
-  if err != nil {
-    log.Fatalf("failed to listen: %v", err)
-  }
-  s := grpc.NewServer()
+	// 向 rRPC 服务器注册微服务
+	// 此时会把我们自己实现的微服务 service 与协议中的 ShippingServiceServer 绑定
+	pb.RegisterShippingServiceServer(server, &service{repo})
 
-  // Register our service with the gRPC server, this will tie our
-  // implementation into the auto-generated interface code for our
-  // protobuf definition.
-  pb.RegisterShippingServiceServer(s, &service{repo})
-
-  // Register reflection service on gRPC server.
-  reflection.Register(s)
-
-  log.Println("Running on port:", port)
-  if err := s.Serve(lis); err != nil {
-    log.Fatalf("failed to serve: %v", err)
-  }
+	if err := server.Serve(listener); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

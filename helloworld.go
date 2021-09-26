@@ -233,7 +233,17 @@ func chanFibonacci() {
 }
 
 func main() {
-
+	//x := 1
+	//fmt.Println(x) //prints 1
+	//{
+	//	fmt.Println(x) //prints 1
+	//	x = 3
+	//	//x := 2         // 不会影响到外部x变量的值
+	//	fmt.Println(x) //prints 2
+	//	//x = 5        // 不会影响到外部x变量值
+	//}
+  x:=1
+	fmt.Println(x) //prints 3
 	//getSqrt := func(val float64) float64 {
 	//  return math.Sqrt(val)
 	//}
