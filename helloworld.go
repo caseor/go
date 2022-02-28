@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"time"
 )
@@ -12,6 +15,157 @@ const (
 	B
 	C
 )
+
+// GlobalFun 1. invoke func to init var GlobalFun
+var GlobalFun = globalFunPrintStr()
+
+// init 2. invoke after global variable init completed
+func init() {
+	fmt.Printf("init() before main() but after golbal variable\n")
+}
+
+// main 3. do main
+func main() {
+	parseCommandLine()
+}
+
+func globalFunPrintStr() string {
+	fmt.Printf("This is globalFunPrintStr")
+	return "This is globalFunPrintStr"
+}
+
+func parseCommandLine() {
+	// go run ./helloworld.go -u caseor -p 123456 -h 127.0.0.1 -P 10000
+	//var user string
+	//var password string
+	//var host string
+	//var port int
+	//flag.StringVar(&user, "u", "root", "username, default 'root'")
+	//flag.StringVar(&password, "p", "", "password, default ''")
+	//flag.StringVar(&host, "h", "localhost", "host, default 'localhost'")
+	//flag.IntVar(&port, "P", 3306, "port, default 3306")
+	//flag.Parse()
+	//fmt.Printf("[user=%v, password=%v, host=%v, port=%v]", user, password, host, port)
+
+	// return type is pointer
+	user1 := flag.String("u", "root", "username, default 'root'")
+	password1 := flag.String("p", "", "password, default ''")
+	host1 := flag.String("h", "localhost", "host, default 'localhost'")
+	port1 := flag.Int("P", 3306, "port, default 3306")
+	flag.Parse()
+	fmt.Printf("[user=%v, password=%v, host=%v, port=%v]", *user1, *password1, *host1, *port1)
+}
+
+func argsTest() {
+	// go run ./helloworld.go I am a boy
+	// There is no way pass args by formal parameter
+	args := os.Args
+	argsLen := len(args)
+	for i := 0; i < argsLen; i++ {
+		fmt.Printf("Parameter: %v, %v\n", i, args[i])
+	}
+}
+
+func executionTimeTest() {
+	start := time.Now()
+	time.Sleep(time.Duration(10) * time.Second)
+	elapsed := time.Since(start)
+	fmt.Printf("elapsed=%v\n", elapsed)
+}
+
+func recoverTest() {
+	// recover is used with defer
+	// just like try catch
+	defer func() {
+		fmt.Printf("defer start\n")
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+		fmt.Printf("defer end\n")
+	}()
+
+	// index out range precedes panic
+	arr := []string{"a", "b"}
+	fmt.Printf("%v\n", arr[2])
+	panic("runtime panic")
+
+	fmt.Println("recoverTest end")
+}
+
+func panicTest(val int) {
+	// usually fatal error
+	if val == 0 {
+		panic("val can not be zero")
+	}
+	fmt.Printf("val=%v", val)
+}
+
+func div(dividend, divisor int) (int, error) {
+	if divisor == 0 {
+		return 0, errors.New("division by zero")
+	}
+	return dividend / divisor, nil
+}
+
+func deferTest(val, sum int) {
+	defer fmt.Printf("%v, %v \n", val, sum)
+	defer fmt.Printf("%v, %v \n", val+1, sum+1)
+	val = val + 1
+	sum = sum + 2
+}
+
+func closureTest() {
+	f := closureAdd()
+	fmt.Printf("%v\n", f(1))
+	fmt.Printf("%v\n", f(2))
+	fmt.Printf("%v\n", f(3))
+	fmt.Printf("%v\n", f(4))
+}
+func closureAdd() func(int) int {
+	i := 0
+	return func(x int) int {
+		i = i + x
+		return i
+	}
+}
+
+func callbackMain() {
+	callbackTest(2, func(i int) {
+		fmt.Printf("%v", i)
+	})
+}
+
+func callbackTest(val int, callback func(int)) {
+	fmt.Printf("execute biz logic\n")
+	callback(val * 2)
+}
+
+func anonymousFun() {
+	f := func(val int, num int) {
+		fmt.Printf("%v, %v ", val, num)
+	}
+	f(1, 2)
+}
+
+func getStaticStr(val int) string {
+	return "hello" + fmt.Sprintf("%v", val)
+}
+
+func dynamicInterfacePrams(args ...interface{}) {
+	for k, v := range args {
+		fmt.Printf("%v, %v, %T\n", k, v, v)
+	}
+}
+
+func dynamicPrams(args ...int) {
+	for k, v := range args {
+		fmt.Printf("%v, %v\n", k, v)
+	}
+}
+
+func returnVal() (isOk bool, val int) {
+	return true, 10
+}
 
 func format() {
 	flag := true
@@ -232,20 +386,39 @@ func chanFibonacci() {
 	}
 }
 
-func main() {
-	//x := 1
-	//fmt.Println(x) //prints 1
-	//{
-	//	fmt.Println(x) //prints 1
-	//	x = 3
-	//	//x := 2         // 不会影响到外部x变量的值
-	//	fmt.Println(x) //prints 2
-	//	//x = 5        // 不会影响到外部x变量值
-	//}
-  x:=1
-	fmt.Println(x) //prints 3
-	//getSqrt := func(val float64) float64 {
-	//  return math.Sqrt(val)
-	//}
-	//chanFibonacci()
+func switchTest() {
+	// every case has a break at the end
+	i := 1
+	switch i {
+	case 1:
+		fmt.Printf("This is 1")
+		fallthrough
+	case 2:
+		fmt.Printf("This is 2")
+
+	case 3:
+		fmt.Printf("This is 3")
+	default:
+		fmt.Printf("This is default")
+	}
+}
+
+func gotoTest() {
+	for i := 0; i < 10; i++ {
+		fmt.Printf("%d\n", i)
+		if i == 5 {
+			goto end
+		}
+	}
+end:
+	fmt.Printf("This is end")
+}
+
+func returnTest(val int) (bool, int) {
+	resultBool := false
+	if val > 0 {
+		resultBool = true
+	}
+	fmt.Printf("bool=%v, int=%v", resultBool, val)
+	return resultBool, val
 }
